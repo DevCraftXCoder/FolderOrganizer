@@ -42,7 +42,7 @@ if ($existing -notmatch 'Folder Organizer Commands') {
   Write-Host "[1/2] Already in profile -- skipped"
 }
 
-# 2. Convert logo PNG to ICO for context menu icon
+# 2. Convert logo PNG to ICO for context menu icon (Vista+ PNG-embedded format)
 $icoPath = Join-Path $ScriptDir 'organize.ico'
 $pngPath = Join-Path $ScriptDir '..\assets\logo.png'
 if ((Test-Path $pngPath) -and -not (Test-Path $icoPath)) {
@@ -54,13 +54,31 @@ if ((Test-Path $pngPath) -and -not (Test-Path $icoPath)) {
     $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
     $g.DrawImage($source, 0, 0, 256, 256)
     $g.Dispose()
-    $hIcon  = $bmp.GetHicon()
-    $icon   = [System.Drawing.Icon]::FromHandle($hIcon)
-    $fs     = [System.IO.FileStream]::new($icoPath, [System.IO.FileMode]::Create)
-    $icon.Save($fs)
-    $fs.Close()
-    $icon.Dispose(); $bmp.Dispose(); $source.Dispose()
-  } catch { $icoPath = $null }
+    $source.Dispose()
+
+    # Save bitmap as PNG into memory stream
+    $pngStream = New-Object System.IO.MemoryStream
+    $bmp.Save($pngStream, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+    $pngBytes = $pngStream.ToArray()
+    $pngStream.Dispose()
+
+    # Build Vista+ PNG-embedded ICO manually
+    # ICO header: reserved(2) + type=1(2) + count=1(2)
+    $header = [byte[]](0x00,0x00, 0x01,0x00, 0x01,0x00)
+    # Directory entry: width=0(256), height=0(256), colorCount=0, reserved=0,
+    #   planes=1(2), bitCount=32(2), dataSize(4), dataOffset=22(4)
+    $pngSize   = [System.BitConverter]::GetBytes([uint32]$pngBytes.Length)
+    $pngOffset = [System.BitConverter]::GetBytes([uint32]22)
+    $dirEntry  = [byte[]](0x00,0x00, 0x00,0x00, 0x01,0x00, 0x20,0x00) + $pngSize + $pngOffset
+
+    $icoBytes = $header + $dirEntry + $pngBytes
+    [System.IO.File]::WriteAllBytes($icoPath, $icoBytes)
+    Write-Host "[2/3] ICO created: $icoPath"
+  } catch {
+    Write-Host "[2/3] ICO creation failed: $_  (using shell32 fallback icon)"
+    $icoPath = $null
+  }
 }
 
 # 3. Right-click context menu (HKCU, no admin required)
@@ -92,12 +110,13 @@ Set-ItemProperty -Path $p1 -Name 'Icon'        -Value $(if ($icoPath) { $icoPath
 New-Item -Path "$p1\Shell" -Force | Out-Null
 
 $sh1 = "$p1\Shell"
-$ps  = "powershell.exe -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%V`""
+$pw  = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+$ps  = "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`""
 
-New-SubEntry $sh1 '01' 'Preview (Smart Sort)'            "$ps"                          'shell32.dll,134'
-New-SubEntry $sh1 '02' 'Apply - Move Files (Smart)'      "$ps -Apply"                   'shell32.dll,16814'
-New-SubEntry $sh1 '03' 'Preview (By Extension)'          "$ps -Mode extension"          'shell32.dll,3'
-New-SubEntry $sh1 '04' 'Apply - Move Files (Extension)'  "$ps -Mode extension -Apply"   'shell32.dll,16814'
+New-SubEntry $sh1 '01' 'Preview (Smart Sort)'            "$ps"                                                                                                                                       'shell32.dll,134'
+New-SubEntry $sh1 '02' 'Apply - Move Files (Smart)'      "$ps -Apply"                                                                                                                                'shell32.dll,16814'
+New-SubEntry $sh1 '03' 'Preview (By Extension)'          "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`" -Mode extension"                    'shell32.dll,3'
+New-SubEntry $sh1 '04' 'Apply - Move Files (Extension)'  "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`" -Mode extension -Apply"             'shell32.dll,16814'
 
 # Organize Pictures submenu (2 options)
 $p2 = "$regBase\ZOrganizePictures"
@@ -109,7 +128,7 @@ Set-ItemProperty -Path $p2 -Name 'Icon'        -Value $(if ($icoPath) { $icoPath
 New-Item -Path "$p2\Shell" -Force | Out-Null
 
 $sh2 = "$p2\Shell"
-$ps2 = "powershell.exe -NoExit -ExecutionPolicy Bypass -File `"$picturesScript`" -TargetPath `"%V`""
+$ps2 = "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$picturesScript`" -TargetPath `"%1`""
 
 New-SubEntry $sh2 '01' 'Preview'            "$ps2"        'shell32.dll,134'
 New-SubEntry $sh2 '02' 'Apply - Move Files' "$ps2 -Apply" 'shell32.dll,16814'
