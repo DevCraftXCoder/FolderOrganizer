@@ -57,6 +57,8 @@ Right-click any folder:
 
 All preview options open a terminal window showing exactly what would move and where — nothing is touched until you choose an Apply option.
 
+> Full command reference: [COMMANDS.md](COMMANDS.md)
+
 ---
 
 ## Categories
