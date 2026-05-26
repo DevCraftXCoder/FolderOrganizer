@@ -4,11 +4,12 @@ param(
   [string]$Mode = 'content'  # 'content' (default) or 'extension'
 )
 
+# .ts removed from videoExts — TypeScript is far more common than MPEG transport streams
 $imageExts  = @('.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff','.svg','.ico','.heic','.avif')
 $videoExts  = @('.mp4','.mov','.avi','.mkv','.wmv','.flv','.webm','.m4v','.vob')
 $audioExts  = @('.mp3','.wav','.flac','.aac','.ogg','.m4a','.wma','.opus','.aiff')
 $docExts    = @('.pdf','.doc','.docx','.txt','.rtf','.odt','.pages')
-$codeDocExt = @('.md')
+$codeDocExt = @('.md')   # treated as code-doc, checked before general docs
 $sheetExts  = @('.xls','.xlsx','.csv','.ods','.numbers')
 $slideExts  = @('.ppt','.pptx','.odp','.key')
 $codeExts   = @('.py','.js','.ts','.jsx','.tsx','.html','.css','.json','.cs','.java','.cpp','.c','.go','.rs','.rb','.php','.sql','.sh','.bash','.yaml','.yml','.toml','.xml','.env','.ini','.cfg','.conf','.ipynb','.r','.swift','.kt','.dart','.lua','.pl','.ex','.exs','.hs','.scala','.clj','.vim','.ps1')
@@ -40,51 +41,52 @@ function Get-ContentCategory($filename) {
   $ext = [System.IO.Path]::GetExtension($filename).ToLower()
   $grp = Get-FileGroup $ext
 
+  # GIFs always go to GIFs
   if ($ext -eq '.gif') { return 'GIFs' }
 
-  # Env/dotfiles
+  # Dotfiles / env / config files (before group checks)
   if ($n -match '^\.env') { return 'Code-Config' }
 
-  # Code docs before doc group check
+  # Code documentation files (before doc group check — .md sits in codedoc group)
   if ($n -match 'changelog|contributing|license|authors|codeowners|maintainers') { return 'Code-Docs' }
 
-  # Backup extension
+  # Backup files with .bak extension
   if ($ext -eq '.bak') { return 'Archives-Backup' }
 
-  # Gaming (any file type)
-  if ($n -match 'ranked|pvp|solo.?que|bot.?lobby|hardpoint|zombies|warzone|gameplay|killcam|clutch|clutched|victory.?royale') { return 'Gaming' }
+  # Gaming (any file type) — checked early, high priority
+  if ($n -match 'ranked|pvp|solo.?que|bot.?lobby|hardpoint|zombies|arc.?raiders|warzone|the.?finals|dont.?shoot|quick.?cash|getting.?smoked|solo.?ranked|gameplay') { return 'Gaming' }
 
-  # Screenshots
+  # Screenshots (any type) — use prefix/infix pattern, no \b (underscore is word char)
   if ($n -match 'screenshot|screen.?cap') { return 'Screenshots' }
 
-  # AI-Generated
-  if ($grp -eq 'image' -and $n -match 'chatgpt.?image|dall.?e|midjourney|stable.?diffusion|masterpiece|best.?quality|hailuo|lucid.?origin|seed\d|_seed|s-\d{7,}') { return 'AI-Generated' }
+  # AI-Generated images
+  if ($grp -eq 'image' -and $n -match 'chatgpt.?image|masterpiece|hailuo|lucid.?origin|seed\d|_seed|s-\d{7,}') { return 'AI-Generated' }
 
-  # Logos
-  if ($n -match 'logo|lgoo') { return 'Logos' }
+  # Logos — image/codedoc only so logo_vector.ai stays in Design
+  if ($grp -eq 'image' -and $n -match 'logo|lgoo') { return 'Logos' }
 
-  # Banners
-  if ($n -match 'banner') { return 'Banners' }
+  # Banners — image only
+  if ($grp -eq 'image' -and $n -match 'banner') { return 'Banners' }
 
-  # Thumbnails
-  if ($n -match 'thumbnail|thumb') { return 'Thumbnails' }
+  # Thumbnails — image only
+  if ($grp -eq 'image' -and $n -match 'thumbnail') { return 'Thumbnails' }
 
-  # Social media posts
-  if ($n -match 'linkedin|linkedpost|twitter.?post|ig.?post|instagram.?post|social.?post') { return 'Social-Posts' }
+  # LinkedIn / Social
+  if ($n -match 'linkedin|linkedpost|linkein|devxcoder|devxocder|cybertools.?post') { return 'LinkedIn-Social' }
 
-  # Avatars / PFPs
-  if ($n -match 'pfp|avatar|pngtuber|profile.?pic') { return 'Avatars-PFPs' }
+  # Avatars / PFPs — pfp often after _ (profile_pfp)
+  if ($n -match 'pfp|avatar|trans_bear|pngtuber|biggest.?bro|mizzy.?pfp') { return 'Avatars-PFPs' }
 
-  # Brand / Marketing assets
-  if ($n -match 'brand|promo.?banner|marketing.?asset|ad.?creative|campaign.?image') { return 'Brand-Marketing' }
+  # Brand / Marketing
+  if ($n -match '^360co|^360mizzy|3sixty|mizzy.?360|gpt.?mizzy|ad.?for.?mizzy') { return 'Brand-Marketing' }
 
   # Game Art
-  if ($n -match 'tile.?guide|encounter.?card|wanted.?poster|dialogue.?card|game.?card|npc.?card|ability.?card|item.?card|character.?card') { return 'Game-Art' }
+  if ($n -match 'tile.?guide|encounter.?card|wanted.?poster|dialogue|jinzey.?and.?clara|old.?western|old.?vintage|outlaw') { return 'Game-Art' }
 
-  # Dev/project screenshots
-  if ($n -match 'architecture|arch.?diagram|db.?schema|er.?diagram|wireframe|mockup.?flow|api.?diagram|system.?design|deploy.?diagram') { return 'Project-Dev' }
+  # Project / Dev screenshots (any type)
+  if ($n -match '^finos|hermes|^sic\b|autodeploy|^francois.?arch|^ops\b|^paste\b|hook.?recovery|focus.?app|growth.?report|learn.?logo|learn.?app|prompt.?library') { return 'Project-Dev' }
 
-  # === CODE DOCS (.md) ===
+  # === CODE DOCS (.md files) ===
   if ($grp -eq 'codedoc') {
     if ($n -match 'readme|spec\b|blueprint|playbook|guide|howto|how.to|manual|tutorial') { return 'Documents-Guides' }
     if ($n -match 'notes?|journal|diary|memo|draft|scratch|ideas?') { return 'Documents-Notes' }
@@ -95,6 +97,7 @@ function Get-ContentCategory($filename) {
   if ($grp -eq 'doc') {
     if ($n -match 'resume|curriculum.?vitae|cover.?letter') { return 'Documents-Resume' }
     if ($n -match '\bcv\b') { return 'Documents-Resume' }
+    if ($n -match 'template|form') { return 'Documents-Templates' }
     if ($n -match 'invoice|receipt|bill\b|payment|order\b|transaction|purchase') { return 'Documents-Invoice' }
     if ($n -match 'contract|agreement|nda|terms|tos|eula') { return 'Documents-Contract' }
     if ($n -match 'report|analysis|summary|audit|review|assessment') { return 'Documents-Report' }
@@ -102,7 +105,6 @@ function Get-ContentCategory($filename) {
     if ($n -match 'budget|expense|financial|finance|tax|income|profit|loss|balance') { return 'Documents-Finance' }
     if ($n -match 'proposal|pitch|presentation|deck') { return 'Documents-Presentation' }
     if ($n -match 'tutorial|guide|howto|how.to|manual|readme|spec\b|blueprint|playbook') { return 'Documents-Guides' }
-    if ($n -match 'template|form') { return 'Documents-Templates' }
     return 'Documents'
   }
 
@@ -125,10 +127,10 @@ function Get-ContentCategory($filename) {
 
   # === AUDIO ===
   if ($grp -eq 'audio') {
+    if ($n -match 'sfx|sound.?effect|foley|ambient') { return 'Audio-SFX' }
     if ($n -match 'beat|instrumental|loop|sample|drum|bass|synth|808') { return 'Audio-Beats' }
     if ($n -match 'vocal|verse|hook|chorus|bridge|acapella') { return 'Audio-Vocals' }
     if ($n -match 'mix|master|stem|export|bounce') { return 'Audio-Mix' }
-    if ($n -match 'sfx|sound.?effect|foley|ambient') { return 'Audio-SFX' }
     if ($n -match 'podcast|interview|episode|ep\d') { return 'Audio-Podcast' }
     return 'Audio'
   }
@@ -136,14 +138,17 @@ function Get-ContentCategory($filename) {
   # === CODE ===
   if ($grp -eq 'code') {
     if ($n -match '\.test\.|\.spec\.|_test\.|_spec\.') { return 'Code-Tests' }
+    # Pure config extensions always win over devops keyword match
+    if ($ext -in @('.conf','.ini','.cfg','.toml','.env')) { return 'Code-Config' }
+    if ($n -match 'docker|compose|nginx|caddy|deploy|workflow|\.github') { return 'Code-DevOps' }
     if ($n -match '\.env|settings\.|\.toml|\.yaml|\.yml|\.ini|\.cfg|\.conf') { return 'Code-Config' }
     if ($n -match 'migration|schema|seed\b|\.sql') { return 'Code-Database' }
     if ($n -match 'readme|changelog|contributing|license') { return 'Code-Docs' }
-    if ($n -match 'docker|compose|nginx|caddy|deploy|workflow|\.github') { return 'Code-DevOps' }
     return 'Code'
   }
 
-  if ($grp -eq 'design')  { return 'Design' }
+  # === DESIGN ===
+  if ($grp -eq 'design') { return 'Design' }
 
   # === ARCHIVES ===
   if ($grp -eq 'archive') {
@@ -164,7 +169,9 @@ function Get-ContentCategory($filename) {
   # Downloaded (hash/UUID/timestamp names)
   if ($n -match '^[0-9a-f]{8}-[0-9a-f]{4}|^[0-9a-f]{32}|^\d{13}\.(jpg|jpeg|png|gif|webp|mp4|mov)$') { return 'Downloaded' }
 
+  # Remaining images
   if ($grp -eq 'image') { return 'Pictures' }
+
   return 'Other'
 }
 
