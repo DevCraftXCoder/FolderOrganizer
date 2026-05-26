@@ -1,0 +1,39 @@
+{
+  "name": "folder-organizer-cli",
+  "version": "1.0.0",
+  "description": "Content-aware Windows folder organizer. Sorts files by what they ARE — not just their extension. Supports 46+ categories, dry-run mode, and Windows Explorer right-click integration.",
+  "author": "DevCraftXCoder",
+  "license": "MIT",
+  "homepage": "https://github.com/DevCraftXCoder/FolderOrganizer#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevCraftXCoder/FolderOrganizer.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": ["win32"],
+  "bin": {
+    "organize": "./bin/organize.js",
+    "organize-pictures": "./bin/organize-pictures.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "windows",
+    "file-organizer",
+    "folder-organizer",
+    "powershell",
+    "cli",
+    "organize",
+    "productivity",
+    "content-aware"
+  ]
+}
