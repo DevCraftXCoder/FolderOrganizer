@@ -91,11 +91,13 @@ foreach ($old in @('OrganizeFolder', 'OrganizePictures')) {
 }
 
 # Helper: create a submenu child entry
+# MUIVerb required on children for Win11 new context menu renderer
 function New-SubEntry($parentShell, $order, $label, $command, $icon) {
   $key = "$parentShell\${order}_$(($label -replace '[^a-zA-Z0-9]',''))"
   New-Item  -Path $key           -Force | Out-Null
   New-Item  -Path "$key\command" -Force | Out-Null
   Set-ItemProperty -Path $key           -Name '(Default)' -Value $label
+  Set-ItemProperty -Path $key           -Name 'MUIVerb'   -Value $label
   Set-ItemProperty -Path "$key\command" -Name '(Default)' -Value $command
   if ($icon) { Set-ItemProperty -Path $key -Name 'Icon' -Value $icon }
 }
@@ -103,7 +105,6 @@ function New-SubEntry($parentShell, $order, $label, $command, $icon) {
 # Organize Folder submenu (4 options)
 $p1 = "$regBase\ZOrganizeFolder"
 New-Item -Path $p1 -Force | Out-Null
-Set-ItemProperty -Path $p1 -Name '(Default)'   -Value 'Organize Folder'
 Set-ItemProperty -Path $p1 -Name 'MUIVerb'     -Value 'Organize Folder'
 Set-ItemProperty -Path $p1 -Name 'SubCommands' -Value ''
 Set-ItemProperty -Path $p1 -Name 'Icon'        -Value $(if ($icoPath) { $icoPath } else { 'shell32.dll,4' })
@@ -113,15 +114,14 @@ $sh1 = "$p1\Shell"
 $pw  = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
 $ps  = "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`""
 
-New-SubEntry $sh1 '01' 'Preview (Smart Sort)'            "$ps"                                                                                                                                       'shell32.dll,134'
-New-SubEntry $sh1 '02' 'Apply - Move Files (Smart)'      "$ps -Apply"                                                                                                                                'shell32.dll,16814'
-New-SubEntry $sh1 '03' 'Preview (By Extension)'          "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`" -Mode extension"                    'shell32.dll,3'
-New-SubEntry $sh1 '04' 'Apply - Move Files (Extension)'  "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`" -Mode extension -Apply"             'shell32.dll,16814'
+New-SubEntry $sh1 '01' 'Preview - Smart Sort'         "$ps"                                                                                                                                'shell32.dll,134'
+New-SubEntry $sh1 '02' 'Apply - Move Files Smart'     "$ps -Apply"                                                                                                                         'shell32.dll,16814'
+New-SubEntry $sh1 '03' 'Preview - By Extension'       "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`" -Mode extension"             'shell32.dll,3'
+New-SubEntry $sh1 '04' 'Apply - Move Files Extension' "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$generalScript`" -TargetPath `"%1`" -Mode extension -Apply"      'shell32.dll,16814'
 
 # Organize Pictures submenu (2 options)
 $p2 = "$regBase\ZOrganizePictures"
 New-Item -Path $p2 -Force | Out-Null
-Set-ItemProperty -Path $p2 -Name '(Default)'   -Value 'Organize Pictures'
 Set-ItemProperty -Path $p2 -Name 'MUIVerb'     -Value 'Organize Pictures'
 Set-ItemProperty -Path $p2 -Name 'SubCommands' -Value ''
 Set-ItemProperty -Path $p2 -Name 'Icon'        -Value $(if ($icoPath) { $icoPath } else { 'shell32.dll,325' })
@@ -133,16 +133,25 @@ $ps2 = "cmd /c start `"`" `"$pw`" -NoExit -ExecutionPolicy Bypass -File `"$pictu
 New-SubEntry $sh2 '01' 'Preview'            "$ps2"        'shell32.dll,134'
 New-SubEntry $sh2 '02' 'Apply - Move Files' "$ps2 -Apply" 'shell32.dll,16814'
 
-Write-Host "[3/3] Right-click menu entries added"
+# Win11 compatibility: restore classic context menu so SubCommands submenus expand on click
+# (HKCU only, reversible — does not affect other user accounts)
+$clsid   = '{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}'
+$clsPath = "HKCU:\Software\Classes\CLSID\$clsid\InprocServer32"
+New-Item -Path $clsPath -Force | Out-Null
+Set-ItemProperty -Path $clsPath -Name '(Default)' -Value '' -Force
+
+Write-Host "[3/3] Right-click menu entries added (Win11 classic menu enabled)"
 Write-Host ""
 Write-Host "DONE. Open a new terminal to use 'organize' and 'organize-pictures'."
 Write-Host ""
 Write-Host "Right-click any folder to see:"
 Write-Host "  Organize Folder >"
-Write-Host "    Preview (Smart Sort)"
-Write-Host "    Apply - Move Files (Smart)"
-Write-Host "    Preview (By Extension)"
-Write-Host "    Apply - Move Files (Extension)"
+Write-Host "    Preview - Smart Sort"
+Write-Host "    Apply - Move Files Smart"
+Write-Host "    Preview - By Extension"
+Write-Host "    Apply - Move Files Extension"
 Write-Host "  Organize Pictures >"
 Write-Host "    Preview"
 Write-Host "    Apply - Move Files"
+Write-Host ""
+Write-Host "NOTE: If submenus don't appear, restart Explorer or sign out/in."
