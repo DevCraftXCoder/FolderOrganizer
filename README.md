@@ -16,7 +16,7 @@ pnpm add -g folder-organizer-cli
 
 After install, the `postinstall` script automatically:
 - Adds `organize` and `organize-pictures` functions to your PowerShell profile
-- Adds **Organize Folder** and **Organize Pictures** to Windows Explorer right-click menu (no admin required)
+- Adds **Organize Folder** and **Organize Pictures** submenus to Windows Explorer right-click (no admin required)
 
 > Open a new terminal after install for the profile functions to activate.
 
@@ -44,8 +44,18 @@ organize-pictures 'C:\Users\You\Pictures' -apply
 ### Windows Explorer
 
 Right-click any folder:
-- **Organize Folder** — runs content-aware sort (dry-run opens in terminal)
-- **Organize Pictures** — picture-specific sort
+
+**Organize Folder >**
+- **Preview (Smart Sort)** — dry-run, content-aware categories
+- **Apply — Move Files (Smart)** — execute smart sort
+- **Preview (By Extension)** — dry-run, grouped by file type only
+- **Apply — Move Files (Extension)** — execute extension sort
+
+**Organize Pictures >**
+- **Preview** — dry-run, picture-specific content categories
+- **Apply — Move Files** — execute picture sort
+
+All preview options open a terminal window showing exactly what would move and where — nothing is touched until you choose an Apply option.
 
 ---
 
@@ -128,6 +138,14 @@ Same content-aware logic but tuned specifically for image folders with more gran
 |---|---|---|
 | Content (default) | `organize path` | Reads filename, assigns smart category |
 | Extension | `organize path -mode extension` | Groups by file type only (Pictures, Videos, Documents, etc.) |
+
+---
+
+## Requirements
+
+- Windows 10 or 11
+- PowerShell 5.1+ (built into Windows)
+- Node.js 18+
 
 ---
 
