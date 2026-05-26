@@ -21,6 +21,15 @@ pnpm add -g folder-organizer-cli
 After install, the `postinstall` script automatically:
 - Adds `organize` and `organize-pictures` functions to your PowerShell profile
 - Adds **Organize Folder** and **Organize Pictures** submenus to Windows Explorer right-click (no admin required)
+- Enables the Windows classic context menu on Windows 11 so submenus expand correctly
+
+### Uninstall
+
+```bash
+organize-uninstall
+```
+
+Removes the context menu entries, profile functions, and restores the Win11 modern context menu. Use `--keep-classic-menu` to keep the classic menu style after uninstalling.
 
 > Open a new terminal after install for the profile functions to activate.
 

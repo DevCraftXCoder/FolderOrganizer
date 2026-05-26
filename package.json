@@ -15,7 +15,8 @@
   "os": ["win32"],
   "bin": {
     "organize": "./bin/organize.js",
-    "organize-pictures": "./bin/organize-pictures.js"
+    "organize-pictures": "./bin/organize-pictures.js",
+    "organize-uninstall": "./bin/organize-uninstall.js"
   },
   "scripts": {
     "postinstall": "node scripts/postinstall.js"
