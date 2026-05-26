@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Folder Organizer" width="160" />
+</p>
+
 # Folder Organizer CLI
 
 Content-aware Windows folder organizer. Sorts files by **what they ARE** — not just their extension.

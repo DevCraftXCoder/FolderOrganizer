@@ -42,7 +42,28 @@ if ($existing -notmatch 'Folder Organizer Commands') {
   Write-Host "[1/2] Already in profile -- skipped"
 }
 
-# 2. Right-click context menu (HKCU, no admin required)
+# 2. Convert logo PNG to ICO for context menu icon
+$icoPath = Join-Path $ScriptDir 'organize.ico'
+$pngPath = Join-Path $ScriptDir '..\assets\logo.png'
+if ((Test-Path $pngPath) -and -not (Test-Path $icoPath)) {
+  try {
+    Add-Type -AssemblyName System.Drawing
+    $source = [System.Drawing.Image]::FromFile((Resolve-Path $pngPath).Path)
+    $bmp    = New-Object System.Drawing.Bitmap 256, 256
+    $g      = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.DrawImage($source, 0, 0, 256, 256)
+    $g.Dispose()
+    $hIcon  = $bmp.GetHicon()
+    $icon   = [System.Drawing.Icon]::FromHandle($hIcon)
+    $fs     = [System.IO.FileStream]::new($icoPath, [System.IO.FileMode]::Create)
+    $icon.Save($fs)
+    $fs.Close()
+    $icon.Dispose(); $bmp.Dispose(); $source.Dispose()
+  } catch { $icoPath = $null }
+}
+
+# 3. Right-click context menu (HKCU, no admin required)
 $regBase = 'HKCU:\Software\Classes\Directory\shell'
 
 # Remove old flat entries if present
@@ -67,7 +88,7 @@ New-Item -Path $p1 -Force | Out-Null
 Set-ItemProperty -Path $p1 -Name '(Default)'   -Value 'Organize Folder'
 Set-ItemProperty -Path $p1 -Name 'MUIVerb'     -Value 'Organize Folder'
 Set-ItemProperty -Path $p1 -Name 'SubCommands' -Value ''
-Set-ItemProperty -Path $p1 -Name 'Icon'        -Value 'shell32.dll,4'
+Set-ItemProperty -Path $p1 -Name 'Icon'        -Value $(if ($icoPath) { $icoPath } else { 'shell32.dll,4' })
 New-Item -Path "$p1\Shell" -Force | Out-Null
 
 $sh1 = "$p1\Shell"
@@ -84,7 +105,7 @@ New-Item -Path $p2 -Force | Out-Null
 Set-ItemProperty -Path $p2 -Name '(Default)'   -Value 'Organize Pictures'
 Set-ItemProperty -Path $p2 -Name 'MUIVerb'     -Value 'Organize Pictures'
 Set-ItemProperty -Path $p2 -Name 'SubCommands' -Value ''
-Set-ItemProperty -Path $p2 -Name 'Icon'        -Value 'shell32.dll,325'
+Set-ItemProperty -Path $p2 -Name 'Icon'        -Value $(if ($icoPath) { $icoPath } else { 'shell32.dll,325' })
 New-Item -Path "$p2\Shell" -Force | Out-Null
 
 $sh2 = "$p2\Shell"
@@ -93,7 +114,7 @@ $ps2 = "powershell.exe -NoExit -ExecutionPolicy Bypass -File `"$picturesScript`"
 New-SubEntry $sh2 '01' 'Preview'            "$ps2"        'shell32.dll,134'
 New-SubEntry $sh2 '02' 'Apply - Move Files' "$ps2 -Apply" 'shell32.dll,16814'
 
-Write-Host "[2/2] Right-click menu entries added"
+Write-Host "[3/3] Right-click menu entries added"
 Write-Host ""
 Write-Host "DONE. Open a new terminal to use 'organize' and 'organize-pictures'."
 Write-Host ""

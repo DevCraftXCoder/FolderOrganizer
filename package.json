@@ -23,6 +23,7 @@
   "files": [
     "bin/",
     "scripts/",
+    "assets/",
     "README.md",
     "COMMANDS.md",
     "LICENSE"
